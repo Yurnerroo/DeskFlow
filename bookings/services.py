@@ -114,6 +114,18 @@ class BookingCoordinator:
             booking_id, (BookingStatus.PENDING, BookingStatus.CONFIRMED), BookingStatus.CANCELLED
         )
 
+    def mark_refunded_late(self, booking_id: int) -> Booking:
+        """Record that a payment landed after the slot was released and was refunded.
+
+        Kept distinct from EXPIRED/CANCELLED so support and reporting can tell a plain
+        timeout apart from "the customer was charged and we gave the money back".
+        """
+        return self._transition(
+            booking_id,
+            (BookingStatus.EXPIRED, BookingStatus.CANCELLED),
+            BookingStatus.REFUNDED_LATE_WEBHOOK,
+        )
+
     def expire_stale(self, now: datetime | None = None) -> int:
         """Release every PENDING hold past its deadline. Safe to run concurrently.
 
