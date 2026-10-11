@@ -14,7 +14,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "django-stubs>=6.1.2",
+    "djangorestframework-stubs>=3.18.1",
     "factory-boy>=3.3.3",
+    "mypy>=2.4.0",
     "pytest>=9.1.1",
     "pytest-django>=4.14.0",
     "ruff>=0.16.10",
@@ -34,3 +37,19 @@ target-version = "py312"
 
 [tool.ruff.lint.per-file-ignores]
 "**/models.py" = ["RUF012"]  # Django Meta.constraints/ordering lists are idiomatic
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+exclude = ["migrations/", "\\.venv/"]
+
+[[tool.mypy.overrides]]
+module = ["factory.*", "environ.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
