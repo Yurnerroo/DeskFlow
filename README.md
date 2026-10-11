@@ -17,6 +17,13 @@ uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
+Background jobs (hold expiry, payment reconciliation) run on Celery:
+```bash
+uv run celery -A config worker -l info
+uv run celery -A config beat -l info
+# or: docker compose up worker beat
+```
+
 ## Tests
 ```bash
 uv run pytest

@@ -19,14 +19,30 @@ services:
   web:
     build: .
     env_file: .env
-    environment:
+    environment: &app-env
       DATABASE_URL: postgres://deskflow:deskflow@db:5432/deskflow
       REDIS_URL: redis://redis:6379/0
     ports: ["8000:8000"]
     volumes: [".:/app"]
-    depends_on:
+    depends_on: &app-deps
       db: { condition: service_healthy }
       redis: { condition: service_started }
+
+  worker:
+    build: .
+    command: celery -A config worker -l info
+    env_file: .env
+    environment: *app-env
+    volumes: [".:/app"]
+    depends_on: *app-deps
+
+  beat:
+    build: .
+    command: celery -A config beat -l info
+    env_file: .env
+    environment: *app-env
+    volumes: [".:/app"]
+    depends_on: *app-deps
 
 volumes:
   pgdata:
