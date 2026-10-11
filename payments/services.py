@@ -6,13 +6,16 @@ Every path that learns a new payment status from a provider funnels through
 
 import logging
 import uuid
+from datetime import timedelta
 
 from django.db import transaction
+from django.utils import timezone
 
 from bookings.models import BookingStatus
 from bookings.services import BookingCoordinator, HoldExpired
 from payments.models import Payment, PaymentStatus, Refund
-from payments.providers.base import BasePaymentProvider, WebhookEvent
+from payments.providers.base import BasePaymentProvider, ProviderError, WebhookEvent
+from payments.providers.registry import get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +65,58 @@ def apply_webhook_event(
         elif event.status != payment.status:
             _set_payment_status(payment, event.status)
         return payment
+
+
+RECONCILE_AFTER = timedelta(minutes=15)
+RESOLVED_BY_PROVIDER = frozenset({PaymentStatus.SUCCEEDED, PaymentStatus.FAILED})
+
+
+def reconcile_pending(
+    older_than: timedelta = RECONCILE_AFTER,
+    coordinator: BookingCoordinator | None = None,
+) -> int:
+    """Poll providers for payments whose webhook never arrived (or was lost).
+
+    Only payments stuck in PENDING/UNKNOWN for longer than ``older_than`` are checked, so the
+    poller does not race the normal webhook path. A resolved status is fed through
+    ``apply_webhook_event`` -- the same code a webhook would run -- which keeps both paths
+    idempotent and consistent. One provider outage never blocks the rest of the batch.
+
+    Returns the number of payments that reached a terminal status.
+    """
+    cutoff = timezone.now() - older_than
+    stale = (
+        Payment.objects.filter(
+            status__in=[PaymentStatus.PENDING, PaymentStatus.UNKNOWN],
+            created_at__lt=cutoff,
+        )
+        .exclude(provider_ref="")
+        .order_by("created_at")
+    )
+
+    resolved = 0
+    for payment in stale.iterator():
+        try:
+            provider = get_provider(payment.provider)
+            result = provider.get_charge(payment.provider_ref)
+        except (ProviderError, LookupError) as exc:
+            logger.warning("Reconciliation skipped payment %s: %s", payment.pk, exc)
+            continue
+
+        if result.status not in RESOLVED_BY_PROVIDER:
+            continue
+
+        event = WebhookEvent(
+            event_id=f"reconcile:{payment.pk}:{result.status}",
+            event_type="reconcile",
+            provider_ref=payment.provider_ref,
+            status=result.status,
+            payload={},
+        )
+        apply_webhook_event(event, provider, coordinator)
+        resolved += 1
+        logger.info("Reconciled payment %s to %s", payment.pk, result.status)
+    return resolved
 
 
 def _confirm_or_refund(
