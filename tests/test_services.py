@@ -232,3 +232,27 @@ def test_expire_stale_frees_slot_for_new_hold(
     coordinator.expire_stale(timezone.now() + coordinator.hold_ttl + timedelta(seconds=1))
 
     assert _hold(coordinator, resource, UserFactory.create(), slot).status == BookingStatus.PENDING
+
+
+@pytest.mark.parametrize("status", [BookingStatus.EXPIRED, BookingStatus.CANCELLED])
+def test_mark_refunded_late_from_released_booking(
+    coordinator: BookingCoordinator, status: BookingStatus
+) -> None:
+    booking = BookingFactory.create(status=status, expires_at=None)
+
+    refunded = coordinator.mark_refunded_late(booking.pk)
+
+    assert refunded.status == BookingStatus.REFUNDED_LATE_WEBHOOK
+
+
+@pytest.mark.parametrize("status", [BookingStatus.PENDING, BookingStatus.CONFIRMED])
+def test_mark_refunded_late_rejects_live_booking(
+    coordinator: BookingCoordinator, status: BookingStatus
+) -> None:
+    booking = BookingFactory.create(status=status)
+
+    with pytest.raises(InvalidTransition):
+        coordinator.mark_refunded_late(booking.pk)
+
+    booking.refresh_from_db()
+    assert booking.status == status
