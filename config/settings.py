@@ -113,6 +113,11 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": env.float("RECONCILE_PAYMENTS_EVERY_SECONDS", default=300.0),
         "options": {"expires": 290},
     },
+    "poll-payouts": {
+        "task": "payments.tasks.poll_pending_payouts",
+        "schedule": env.float("POLL_PAYOUTS_EVERY_SECONDS", default=300.0),
+        "options": {"expires": 290},
+    },
 }
 
 # Payment providers. Defaults point at sandboxes and dummy keys so tests never hit real money.

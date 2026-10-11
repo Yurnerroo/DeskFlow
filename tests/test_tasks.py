@@ -10,7 +10,7 @@ from bookings.models import BookingStatus
 from bookings.tasks import expire_stale_holds
 from config import celery_app
 from payments import tasks as payment_tasks
-from payments.tasks import reconcile_pending_payments
+from payments.tasks import poll_pending_payouts, reconcile_pending_payments
 from tests.factories import BookingFactory
 
 pytestmark = pytest.mark.django_db
@@ -54,7 +54,15 @@ def test_reconcile_task_delegates_to_service(monkeypatch: pytest.MonkeyPatch) ->
     assert calls == [True]
 
 
-@pytest.mark.parametrize("task", [expire_stale_holds, reconcile_pending_payments])
+def test_poll_payouts_task_delegates_to_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(payment_tasks, "poll_payouts", lambda: 3)
+
+    assert poll_pending_payouts() == 3
+
+
+@pytest.mark.parametrize(
+    "task", [expire_stale_holds, reconcile_pending_payments, poll_pending_payouts]
+)
 def test_tasks_retry_on_transient_db_errors(task: Any) -> None:
     assert task.acks_late is True
     assert OperationalError in task.autoretry_for
@@ -73,3 +81,4 @@ def test_beat_schedule_points_at_registered_tasks() -> None:
 
     assert schedule["expire-stale-holds"]["schedule"] == 60.0
     assert schedule["reconcile-pending-payments"]["schedule"] == 300.0
+    assert schedule["poll-payouts"]["schedule"] == 300.0
