@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from bookings.models import Booking, KindChoices, Resource, Workspace
-from payments.models import Payment, Provider
+from payments.models import Payee, Payment, Payout, Provider
 
 
 class UserFactory(factory.django.DjangoModelFactory[User]):
@@ -51,5 +51,23 @@ class PaymentFactory(factory.django.DjangoModelFactory[Payment]):
 
     booking = factory.SubFactory(BookingFactory)
     provider = Provider.STRIPE
+    amount_minor = 2500
+    currency = "EUR"
+
+
+class PayeeFactory(factory.django.DjangoModelFactory[Payee]):
+    class Meta:
+        model = Payee
+
+    name = factory.Sequence(lambda n: f"Operator {n}")
+    currency = "EUR"
+    wise_recipient_id = factory.Sequence(lambda n: str(10_000 + n))
+
+
+class PayoutFactory(factory.django.DjangoModelFactory[Payout]):
+    class Meta:
+        model = Payout
+
+    payee = factory.SubFactory(PayeeFactory)
     amount_minor = 2500
     currency = "EUR"
