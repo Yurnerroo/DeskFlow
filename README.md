@@ -33,4 +33,4 @@ Operators are paid out through Wise. Payouts are created idempotently, polled un
 uv run pytest
 ```
 
-Architecture decisions: [`docs/adr`](docs/adr).
+Architecture decisions: [`docs/adr`](docs/adr). · Interview notes: [`docs/interview-notes.md`](docs/interview-notes.md)
