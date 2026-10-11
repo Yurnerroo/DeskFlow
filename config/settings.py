@@ -84,6 +84,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {"default": env.db()}
 
 
+# Redis (distributed locks, later Celery broker)
+
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+
+
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
