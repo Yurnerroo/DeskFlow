@@ -82,3 +82,30 @@ class Refund(models.Model):
 
     def __str__(self) -> str:
         return f"Refund {self.amount_minor} of payment {self.payment_id} [{self.status}]"
+
+
+class ProcessedWebhookEvent(models.Model):
+    """Inbox of provider webhook deliveries, used for at-most-once processing.
+
+    Providers deliver at-least-once and retry on any non-2xx, so the same event id can
+    arrive many times. Inserting the row is the dedup step: the unique constraint makes a
+    second delivery fail fast instead of confirming or refunding a booking twice.
+    """
+
+    provider = models.CharField(max_length=16, choices=Provider)
+    event_id = models.CharField(max_length=255)
+    event_type = models.CharField(max_length=128)
+    payload = models.JSONField(default=dict)
+    received_at = models.DateTimeField(auto_now_add=True)
+    # Null until the domain side effects have been applied; lets ops find stuck events.
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "event_id"], name="webhook_event_unique_provider_event"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.provider} {self.event_type} {self.event_id}"

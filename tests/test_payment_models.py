@@ -1,7 +1,7 @@
 import pytest
 from django.db import IntegrityError, transaction
 
-from payments.models import PaymentStatus, Provider
+from payments.models import PaymentStatus, ProcessedWebhookEvent, Provider
 from tests.factories import PaymentFactory
 
 pytestmark = pytest.mark.django_db
@@ -31,3 +31,13 @@ def test_provider_ref_is_unique_per_provider() -> None:
 def test_amount_must_be_positive() -> None:
     with pytest.raises(IntegrityError), transaction.atomic():
         PaymentFactory.create(amount_minor=0)
+
+
+def test_webhook_event_is_unique_per_provider() -> None:
+    ProcessedWebhookEvent.objects.create(provider=Provider.STRIPE, event_id="evt_1", event_type="x")
+    ProcessedWebhookEvent.objects.create(provider=Provider.PAYPAL, event_id="evt_1", event_type="x")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ProcessedWebhookEvent.objects.create(
+            provider=Provider.STRIPE, event_id="evt_1", event_type="x"
+        )
