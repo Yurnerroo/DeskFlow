@@ -1,3 +1,5 @@
+# Adapters register themselves with the registry as a side effect of being imported.
+from payments.providers import stripe  # noqa: F401
 from payments.providers.base import (
     BasePaymentProvider,
     ChargeRequest,
