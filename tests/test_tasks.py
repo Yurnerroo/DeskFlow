@@ -1,3 +1,4 @@
+import datetime as dt
 from datetime import timedelta
 from typing import Any
 
@@ -10,7 +11,7 @@ from bookings.models import BookingStatus
 from bookings.tasks import expire_stale_holds
 from config import celery_app
 from payments import tasks as payment_tasks
-from payments.tasks import poll_pending_payouts, reconcile_pending_payments
+from payments.tasks import poll_pending_payouts, reconcile_pending_payments, settle_daily_payouts
 from tests.factories import BookingFactory
 
 pytestmark = pytest.mark.django_db
@@ -60,8 +61,22 @@ def test_poll_payouts_task_delegates_to_service(monkeypatch: pytest.MonkeyPatch)
     assert poll_pending_payouts() == 3
 
 
+def test_settle_task_settles_yesterday(monkeypatch: pytest.MonkeyPatch) -> None:
+    days: list[dt.date] = []
+
+    def fake_settle(day: dt.date) -> list[object]:
+        days.append(day)
+        return [object(), object()]
+
+    monkeypatch.setattr(payment_tasks, "settle_day", fake_settle)
+
+    assert settle_daily_payouts() == 2
+    assert days == [dt.datetime.now(dt.UTC).date() - dt.timedelta(days=1)]
+
+
 @pytest.mark.parametrize(
-    "task", [expire_stale_holds, reconcile_pending_payments, poll_pending_payouts]
+    "task",
+    [expire_stale_holds, reconcile_pending_payments, poll_pending_payouts, settle_daily_payouts],
 )
 def test_tasks_retry_on_transient_db_errors(task: Any) -> None:
     assert task.acks_late is True
@@ -82,3 +97,4 @@ def test_beat_schedule_points_at_registered_tasks() -> None:
     assert schedule["expire-stale-holds"]["schedule"] == 60.0
     assert schedule["reconcile-pending-payments"]["schedule"] == 300.0
     assert schedule["poll-payouts"]["schedule"] == 300.0
+    assert schedule["settle-daily"]["schedule"] == 86400.0
