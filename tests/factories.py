@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from bookings.models import Booking, KindChoices, Resource, Workspace
+from payments.models import Payment, Provider
 
 
 class UserFactory(factory.django.DjangoModelFactory[User]):
@@ -42,3 +43,13 @@ class BookingFactory(factory.django.DjangoModelFactory[Booking]):
     user = factory.SubFactory(UserFactory)
     start_time = factory.LazyFunction(lambda: timezone.now() + timedelta(days=1))
     end_time = factory.LazyAttribute(lambda o: o.start_time + timedelta(hours=1))
+
+
+class PaymentFactory(factory.django.DjangoModelFactory[Payment]):
+    class Meta:
+        model = Payment
+
+    booking = factory.SubFactory(BookingFactory)
+    provider = Provider.STRIPE
+    amount_minor = 2500
+    currency = "EUR"
