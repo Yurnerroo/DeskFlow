@@ -2,13 +2,13 @@ from datetime import timedelta
 
 import factory
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import User
 from django.utils import timezone
 
 from bookings.models import Booking, KindChoices, Resource, Workspace
 
 
-class UserFactory(factory.django.DjangoModelFactory[AbstractUser]):
+class UserFactory(factory.django.DjangoModelFactory[User]):
     class Meta:
         model = get_user_model()
 

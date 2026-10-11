@@ -1,12 +1,12 @@
 import pytest
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import User
 
 from bookings.models import Resource
 from tests.factories import ResourceFactory, UserFactory
 
 
 @pytest.fixture
-def user() -> AbstractUser:
+def user() -> User:
     return UserFactory.create()
 
 
