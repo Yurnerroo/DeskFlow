@@ -1,7 +1,10 @@
 from django.conf import settings
 from django.db import models
 
-KindChoices = models.TextChoices("KindChoices", "Desk Room")
+
+class KindChoices(models.TextChoices):
+    DESK = "Desk", "Desk"
+    ROOM = "Room", "Room"
 
 
 class Workspace(models.Model):
