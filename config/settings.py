@@ -89,6 +89,17 @@ DATABASES = {"default": env.db()}
 
 REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
 
+# Payment providers. Defaults point at sandboxes and dummy keys so tests never hit real money.
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="sk_test_dummy")
+STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="whsec_dummy")
+STRIPE_API_BASE = env("STRIPE_API_BASE", default="https://api.stripe.com")
+PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID", default="paypal_client_dummy")
+PAYPAL_CLIENT_SECRET = env("PAYPAL_CLIENT_SECRET", default="paypal_secret_dummy")
+PAYPAL_BASE_URL = env("PAYPAL_BASE_URL", default="https://api-m.sandbox.paypal.com")
+PAYPAL_WEBHOOK_ID = env("PAYPAL_WEBHOOK_ID", default="paypal_webhook_dummy")
+WEBHOOK_TOLERANCE_SECONDS = env.int("WEBHOOK_TOLERANCE_SECONDS", default=300)
+PAYMENT_HTTP_TIMEOUT_SECONDS = env.float("PAYMENT_HTTP_TIMEOUT_SECONDS", default=10.0)
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

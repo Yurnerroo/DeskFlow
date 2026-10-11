@@ -9,6 +9,7 @@ dependencies = [
     "django-environ>=0.14.0",
     "djangorestframework>=3.18.3",
     "drf-spectacular>=0.30.0",
+    "httpx>=0.28.1",
     "psycopg[binary]>=3.3.6",
     "redis>=8.1.0",
 ]
