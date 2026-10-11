@@ -18,6 +18,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from payments.views import ProviderWebhookView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("webhooks/<str:provider>/", ProviderWebhookView.as_view(), name="provider-webhook"),
 ]
