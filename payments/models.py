@@ -84,6 +84,72 @@ class Refund(models.Model):
         return f"Refund {self.amount_minor} of payment {self.payment_id} [{self.status}]"
 
 
+class PayoutStatus(models.TextChoices):
+    CREATED = "CREATED", "Created locally"
+    PROCESSING = "PROCESSING", "Processing at provider"
+    PAID = "PAID", "Paid out"
+    FAILED = "FAILED", "Failed"
+    # Same rule as payments: an unrecognised provider status is never guessed; polling
+    # keeps asking until the provider reports something we understand.
+    UNKNOWN = "UNKNOWN", "Unknown"
+
+
+class Payee(models.Model):
+    """Someone we send money to, e.g. the operator of a workspace."""
+
+    name = models.CharField(max_length=200)
+    currency = models.CharField(max_length=3)
+    # Wise recipient account id. Bank details stay at Wise; we only keep the reference.
+    wise_recipient_id = models.CharField(max_length=64)
+    workspace = models.ForeignKey(
+        "bookings.Workspace",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payees",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.currency})"
+
+
+class Payout(models.Model):
+    payee = models.ForeignKey(Payee, on_delete=models.PROTECT, related_name="payouts")
+    booking = models.ForeignKey(
+        Booking, on_delete=models.PROTECT, null=True, blank=True, related_name="payouts"
+    )
+    provider = models.CharField(max_length=16, choices=Provider, default=Provider.WISE)
+    amount_minor = models.PositiveBigIntegerField()
+    currency = models.CharField(max_length=3)
+    status = models.CharField(
+        max_length=16, choices=PayoutStatus, default=PayoutStatus.CREATED, db_index=True
+    )
+    # Wise transfer id; empty until the transfer has been created.
+    provider_ref = models.CharField(max_length=255, blank=True, default="")
+    # Sent as Wise's customerTransactionId, so a retried create returns the same transfer
+    # instead of sending the money twice.
+    idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    failure_reason = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "provider_ref"],
+                condition=~models.Q(provider_ref=""),
+                name="payout_unique_provider_ref",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount_minor__gt=0), name="payout_amount_positive"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Payout {self.amount_minor} {self.currency} to {self.payee_id} [{self.status}]"
+
+
 class ProcessedWebhookEvent(models.Model):
     """Inbox of provider webhook deliveries, used for at-most-once processing.
 

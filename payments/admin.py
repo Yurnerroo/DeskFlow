@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from payments.models import Payment, ProcessedWebhookEvent, Refund
+from payments.models import Payee, Payment, Payout, ProcessedWebhookEvent, Refund
 
 
 class RefundInline(admin.TabularInline):
@@ -16,6 +16,20 @@ class PaymentAdmin(admin.ModelAdmin):
     search_fields = ("provider_ref", "idempotency_key")
     readonly_fields = ("idempotency_key", "provider_ref", "created_at", "updated_at")
     inlines = (RefundInline,)
+
+
+@admin.register(Payee)
+class PayeeAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "currency", "workspace", "wise_recipient_id", "created_at")
+    search_fields = ("name", "wise_recipient_id")
+
+
+@admin.register(Payout)
+class PayoutAdmin(admin.ModelAdmin):
+    list_display = ("id", "payee", "booking", "amount_minor", "currency", "status", "created_at")
+    list_filter = ("status", "currency")
+    search_fields = ("provider_ref", "idempotency_key")
+    readonly_fields = ("idempotency_key", "provider_ref", "created_at", "updated_at")
 
 
 @admin.register(ProcessedWebhookEvent)

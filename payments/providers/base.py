@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
-from payments.models import PaymentStatus, Provider, RefundStatus
+from payments.models import PaymentStatus, PayoutStatus, Provider, RefundStatus
 
 
 class ProviderError(Exception):
@@ -82,3 +82,39 @@ class BasePaymentProvider(ABC):
 
     @abstractmethod
     def parse_webhook(self, body: bytes, headers: Mapping[str, str]) -> WebhookEvent: ...
+
+
+# -- payouts (money going *out* to payees) ------------------------------------
+
+
+@dataclass(frozen=True)
+class PayoutRequest:
+    amount_minor: int
+    currency: str
+    idempotency_key: str
+    recipient_id: str
+    reference: str = ""
+
+
+@dataclass(frozen=True)
+class PayoutResult:
+    provider_ref: str
+    status: PayoutStatus
+    raw_status: str = ""
+    failure_reason: str = ""
+
+
+class BasePayoutProvider(ABC):
+    """Separate from BasePaymentProvider: payout rails (Wise) cannot take charges."""
+
+    provider: ClassVar[Provider]
+    status_map: ClassVar[Mapping[str, PayoutStatus]] = {}
+
+    def map_status(self, raw_status: str) -> PayoutStatus:
+        return self.status_map.get(raw_status, PayoutStatus.UNKNOWN)
+
+    @abstractmethod
+    def create_payout(self, request: PayoutRequest) -> PayoutResult: ...
+
+    @abstractmethod
+    def get_payout(self, provider_ref: str) -> PayoutResult: ...

@@ -113,6 +113,16 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": env.float("RECONCILE_PAYMENTS_EVERY_SECONDS", default=300.0),
         "options": {"expires": 290},
     },
+    "poll-payouts": {
+        "task": "payments.tasks.poll_pending_payouts",
+        "schedule": env.float("POLL_PAYOUTS_EVERY_SECONDS", default=300.0),
+        "options": {"expires": 290},
+    },
+    "settle-daily": {
+        "task": "payments.tasks.settle_daily_payouts",
+        "schedule": env.float("SETTLEMENT_EVERY_SECONDS", default=86400.0),
+        "options": {"expires": 3600},
+    },
 }
 
 # Payment providers. Defaults point at sandboxes and dummy keys so tests never hit real money.
@@ -123,6 +133,9 @@ PAYPAL_CLIENT_ID = env("PAYPAL_CLIENT_ID", default="paypal_client_dummy")
 PAYPAL_CLIENT_SECRET = env("PAYPAL_CLIENT_SECRET", default="paypal_secret_dummy")
 PAYPAL_BASE_URL = env("PAYPAL_BASE_URL", default="https://api-m.sandbox.paypal.com")
 PAYPAL_WEBHOOK_ID = env("PAYPAL_WEBHOOK_ID", default="paypal_webhook_dummy")
+WISE_API_TOKEN = env("WISE_API_TOKEN", default="wise_token_dummy")
+WISE_PROFILE_ID = env("WISE_PROFILE_ID", default="0")
+WISE_BASE_URL = env("WISE_BASE_URL", default="https://api.sandbox.transferwise.tech")
 WEBHOOK_TOLERANCE_SECONDS = env.int("WEBHOOK_TOLERANCE_SECONDS", default=300)
 PAYMENT_HTTP_TIMEOUT_SECONDS = env.float("PAYMENT_HTTP_TIMEOUT_SECONDS", default=10.0)
 
