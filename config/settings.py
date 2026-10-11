@@ -101,6 +101,19 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_RESULT_EXPIRES = 3600
+# Intervals are well under the 10-minute hold TTL, so a stale hold never blocks a slot for long.
+CELERY_BEAT_SCHEDULE = {
+    "expire-stale-holds": {
+        "task": "bookings.tasks.expire_stale_holds",
+        "schedule": env.float("EXPIRE_HOLDS_EVERY_SECONDS", default=60.0),
+        "options": {"expires": 55},
+    },
+    "reconcile-pending-payments": {
+        "task": "payments.tasks.reconcile_pending_payments",
+        "schedule": env.float("RECONCILE_PAYMENTS_EVERY_SECONDS", default=300.0),
+        "options": {"expires": 290},
+    },
+}
 
 # Payment providers. Defaults point at sandboxes and dummy keys so tests never hit real money.
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="sk_test_dummy")
