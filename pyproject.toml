@@ -5,6 +5,7 @@ description = "Coworking desk & meeting-room booking platform (Django + DRF)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "celery>=5.6.3",
     "django>=6.1.2",
     "django-environ>=0.14.0",
     "djangorestframework>=3.18.3",
@@ -50,7 +51,7 @@ check_untyped_defs = true
 exclude = ["migrations/", "\\.venv/"]
 
 [[tool.mypy.overrides]]
-module = ["factory.*", "environ.*"]
+module = ["factory.*", "environ.*", "celery.*"]
 ignore_missing_imports = true
 
 [tool.django-stubs]
