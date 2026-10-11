@@ -1,5 +1,14 @@
 from django.conf import settings
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import DateTimeRangeField, RangeOperators
 from django.db import models
+
+
+class TsTzRange(models.Func):
+    """Build a half-open [start, end) timestamptz range so back-to-back bookings don't overlap."""
+
+    function = "TSTZRANGE"
+    output_field = DateTimeRangeField()
 
 
 class KindChoices(models.TextChoices):
@@ -55,5 +64,15 @@ class Booking(models.Model):
             models.CheckConstraint(
                 condition=models.Q(end_time__gt=models.F("start_time")),
                 name="booking_end_after_start",
+            ),
+            # The database is the final arbiter of double booking: no two active
+            # bookings on the same resource may have overlapping time ranges.
+            ExclusionConstraint(
+                name="booking_no_overlap_active",
+                expressions=[
+                    ("resource", RangeOperators.EQUAL),
+                    (TsTzRange("start_time", "end_time"), RangeOperators.OVERLAPS),
+                ],
+                condition=models.Q(status__in=ACTIVE_STATUSES),
             ),
         ]
