@@ -24,12 +24,31 @@ class Resource(models.Model):
         ]
 
 
+class BookingStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending payment"
+    CONFIRMED = "CONFIRMED", "Confirmed"
+    EXPIRED = "EXPIRED", "Expired"
+    PAYMENT_FAILED = "PAYMENT_FAILED", "Payment failed"
+    REFUNDED_LATE_WEBHOOK = "REFUNDED_LATE_WEBHOOK", "Refunded (late webhook)"
+    CANCELLED = "CANCELLED", "Cancelled"
+
+
+# Statuses that occupy the slot. Everything else is terminal and frees it.
+ACTIVE_STATUSES = (BookingStatus.PENDING, BookingStatus.CONFIRMED)
+
+
 class Booking(models.Model):
     resource = models.ForeignKey(Resource, on_delete=models.PROTECT)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    status = models.CharField(
+        max_length=32, choices=BookingStatus, default=BookingStatus.PENDING, db_index=True
+    )
+    # Hold deadline for PENDING bookings; null once the booking leaves PENDING.
+    expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
